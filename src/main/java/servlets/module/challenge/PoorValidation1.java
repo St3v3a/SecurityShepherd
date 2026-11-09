@@ -75,16 +75,20 @@ public class PoorValidation1 extends HttpServlet {
         int bananaAmount = Integer.parseInt(request.getParameter("bananaAmount"));
         log.debug("bananaAmount - " + bananaAmount);
 
-        // Working out costs
-        int pineappleCost = pineappleAmount * 30;
-        int orangeCost = orangeAmount * 3000;
-        int appleCost = appleAmount * 45;
-        int bananaCost = bananaAmount * 15;
+        if (pineappleAmount < 0 || orangeAmount < 0 || appleAmount < 0 || bananaAmount < 0) {
+          throw new IllegalArgumentException("Order quantities must not be negative");
+        }
+
+        // Use a wide type before multiplying to prevent an overflowing total.
+        long pineappleCost = pineappleAmount * 30L;
+        long orangeCost = orangeAmount * 3000L;
+        long appleCost = appleAmount * 45L;
+        long bananaCost = bananaAmount * 15L;
 
         htmlOutput = new String();
 
         // Work Out Final Cost
-        int finalCost = pineappleCost + appleCost + bananaCost + orangeCost;
+        long finalCost = pineappleCost + appleCost + bananaCost + orangeCost;
 
         // Output Order
         htmlOutput =
