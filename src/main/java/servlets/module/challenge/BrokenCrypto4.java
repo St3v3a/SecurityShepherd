@@ -97,7 +97,8 @@ public class BrokenCrypto4 extends HttpServlet {
         Connection conn = Database.getChallengeConnection(applicationRoot, "CryptoChallengeShop");
         log.debug("Looking for Coupons");
         PreparedStatement prepstmt =
-            conn.prepareStatement("SELECT itemId, perCentOff FROM coupons WHERE couponCode = ?");
+            conn.prepareStatement(
+                "SELECT itemId, perCentOff FROM coupons WHERE couponCode = ? AND couponId <> 432197");
         prepstmt.setString(1, couponCode);
         ResultSet coupons = prepstmt.executeQuery();
         try {
@@ -128,11 +129,11 @@ public class BrokenCrypto4 extends HttpServlet {
         conn.close();
 
         // Work Out Final Cost
-        pineappleCost = pineappleCost - (pineappleCost * (perCentOffPineapple / 100));
-        appleCost = appleCost - (appleCost * (perCentOffApple / 100));
-        bananaCost = bananaCost - (bananaCost * (perCentOffBanana / 100));
-        orangeCost = orangeCost - (orangeCost * (perCentOffOrange / 100));
-        int finalCost = pineappleCost + appleCost + bananaAmount + orangeCost;
+        pineappleCost = discountedCost(pineappleCost, perCentOffPineapple);
+        appleCost = discountedCost(appleCost, perCentOffApple);
+        bananaCost = discountedCost(bananaCost, perCentOffBanana);
+        orangeCost = discountedCost(orangeCost, perCentOffOrange);
+        int finalCost = pineappleCost + appleCost + bananaCost + orangeCost;
 
         // Output Order
         htmlOutput =
@@ -179,5 +180,9 @@ public class BrokenCrypto4 extends HttpServlet {
       amount = 0;
     }
     return amount;
+  }
+
+  private static int discountedCost(int cost, int perCentOff) {
+    return cost - (int) ((long) cost * perCentOff / 100);
   }
 }
