@@ -39,7 +39,12 @@ COPY --from=builder /workdir/database.properties /usr/local/tomcat/conf/
 COPY --from=builder /workdir/mongo.properties /usr/local/tomcat/conf/
 
 ENV RUN_USER tomcat
-RUN apt-get -qq update && apt-get install -y patch libargon2-1
+RUN for source in /etc/apt/sources.list /etc/apt/sources.list.d/*.sources; do \
+      if [ -f "$source" ]; then sed -i 's|http://|https://|g' "$source"; fi; \
+    done \
+    && apt-get -o Acquire::Retries=3 -qq update \
+    && apt-get install -y --no-install-recommends patch libargon2-1 \
+    && rm -rf /var/lib/apt/lists/*
 RUN adduser --system --group ${RUN_USER} --home ${CATALINA_HOME}
 RUN chown -R ${RUN_USER}:${RUN_GROUP} $CATALINA_HOME
 USER ${RUN_USER}
