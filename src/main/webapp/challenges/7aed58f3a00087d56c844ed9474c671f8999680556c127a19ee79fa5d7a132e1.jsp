@@ -101,6 +101,7 @@ if (request.getSession() != null)
 		<br />
 		<div id="userControl" style="display: none;">
 			<form id="leForm2" action="javascript:;">
+				<input type="hidden" id="resetCsrfToken" value="<%= org.owasp.encoder.Encode.forHtmlAttribute(tokenCookie.getValue()) %>" />
 				<h2 class='title'><%= bundle.getString("change.header") %></h2>
 				<p>
 					<%= bundle.getString("change.whatToDo") %>
@@ -165,7 +166,8 @@ if (request.getSession() != null)
 						type: "POST",
 						url: "<%= levelHash %>SendToken",
 						data: {
-							subUserName: theUserToReset
+							subUserName: theUserToReset,
+							csrfToken: $("#resetCsrfToken").val()
 						},
 						async: false
 					});
@@ -192,43 +194,14 @@ if (request.getSession() != null)
 				});
 			});
 			
-			//<%= bundle.getString("clue.2") %>
-			//<%= bundle.getString("clue.3") %>
-			$("#leForm3").submit(function(){
-				var theUserName = $("#subUserName").val();
-				var theNewPassword = $("#subNewPass").val();
-				var theToken = $("#updatePasswordToken").val();
-				$("#resetSubmit").hide("fast");
-				$("#resetLoadingSign").show("slow");
-				$("#resultsDiv2").hide("slow", function(){
-					var ajaxCall = $.ajax({
-						type: "POST",
-						url: "<%= levelHash %>ChangePass",
-						data: {
-							userName: theUserName,
-							newPassword: theNewPassword,
-							resetPasswordToken: theToken
-						},
-						async: false
-					});
-					if(ajaxCall.status == 200)
-					{
-						$("#resultsDiv2").html(ajaxCall.responseText);
-					}
-					else
-					{
-						$("#resultsDiv2").html("<p> <%= bundle.getString("error.occurred") %>: " + ajaxCall.status + " " + ajaxCall.statusText + "</p>");
-					}
-					$("#resultsDiv2").show("slow", function(){
-						$("#resetLoadingSign").hide("fast", function(){
-							$("#resetSubmit").show("slow");
-						});
-					});
-				});
-			});
 		</script>
 	<% if(Analytics.googleAnalyticsOn) { %><%= Analytics.googleAnalyticsScript %>
 	<% } %>
+	<form method="post" action="<%= request.getContextPath() %>/challenges/admin-confirm">
+		<label>Confirm administrator password <input type="password" name="currentPassword" required /></label>
+		<input type="hidden" name="csrfToken" value="<%= org.owasp.encoder.Encode.forHtmlAttribute(tokenCookie.getValue()) %>" />
+		<button type="submit">Confirm admin access</button>
+	</form>
 </body>
 </html>
 <% 
