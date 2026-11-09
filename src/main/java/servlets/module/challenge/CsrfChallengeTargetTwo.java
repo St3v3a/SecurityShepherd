@@ -72,7 +72,10 @@ public class CsrfChallengeTargetTwo extends HttpServlet {
         String plusId = request.getParameter("userId");
         log.debug("User Submitted - " + plusId);
         String userId = (String) ses.getAttribute("userStamp");
-        if (!userId.equals(plusId)) {
+        if (userId != null
+            && userId.equals(plusId)
+            && Validate.validateTokens(
+                Validate.getToken(request.getCookies()), request.getParameter("csrfToken"))) {
           String ApplicationRoot = getServletContext().getRealPath("");
           String userName = (String) ses.getAttribute("userName");
           String attackerName = Getter.getUserName(ApplicationRoot, plusId);
@@ -82,7 +85,7 @@ public class CsrfChallengeTargetTwo extends HttpServlet {
             log.debug("Attempting to Increment ");
             String moduleHash = CsrfChallengeTwo.getLevelHash();
             String moduleId = Getter.getModuleIdFromHash(ApplicationRoot, moduleHash);
-            result = Setter.updateCsrfCounter(ApplicationRoot, moduleId, plusId);
+            result = Setter.updateCsrfCounter(ApplicationRoot, moduleId, userId);
           } else {
             log.error("UserId '" + plusId + "' could not be found.");
           }

@@ -159,7 +159,6 @@ String i18nLevelName = bundle.getString("challenge.challengeName");
 			});
 			
 			$("#leForm2").submit(function(){
-				document.cookie="current=WjNWbGMzUXhNZz09";
 				var theNewPassword = $("#passOne").val();
 				var theNewPasswordAgain = $("#passTwo").val();
 				if(theNewPassword == theNewPasswordAgain && theNewPassword.length > 6)
