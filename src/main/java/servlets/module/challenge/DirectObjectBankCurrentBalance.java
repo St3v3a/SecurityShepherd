@@ -69,6 +69,12 @@ public class DirectObjectBankCurrentBalance extends HttpServlet {
       try {
         String accountNumber = request.getParameter("accountNumber");
         log.debug("Account Number - " + accountNumber);
+        String authenticatedAccount = (String) ses.getAttribute("directObjectBankAccount");
+        if (authenticatedAccount == null || !authenticatedAccount.equals(accountNumber)) {
+          response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+          out.write(bundle.getString("login.error.couldNotGetBalance"));
+          return;
+        }
         String applicationRoot = getServletContext().getRealPath("");
         String htmlOutput = new String();
         long currentBalance =

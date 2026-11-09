@@ -75,6 +75,11 @@ public class DirectObjectBankTransfer extends HttpServlet {
       try {
         String senderAccountNumber = request.getParameter("senderAccountNumber");
         log.debug("Sender Account Number - " + senderAccountNumber);
+        String authenticatedAccount = (String) ses.getAttribute("directObjectBankAccount");
+        if (authenticatedAccount == null || !authenticatedAccount.equals(senderAccountNumber)) {
+          out.write(bundle.getString("transfer.error.couldNotTransfer"));
+          return;
+        }
         String receiverAccountNumber = request.getParameter("receiverAccountNumber");
         log.debug("Receiver Account Number - " + receiverAccountNumber);
         String transferAmountString = request.getParameter("transferAmount");

@@ -82,7 +82,9 @@ public class DirectObject1 extends HttpServlet {
         Connection conn =
             Database.getChallengeConnection(ApplicationRoot, "directObjectRefChalOne");
         PreparedStatement prepstmt =
-            conn.prepareStatement("SELECT userName, privateMessage FROM users WHERE userId = ?");
+            conn.prepareStatement(
+                "SELECT userName, privateMessage FROM users WHERE userId = ? AND userId IN"
+                    + " ('1', '3', '5', '7', '9')");
         prepstmt.setString(1, userId);
         ResultSet resultSet = prepstmt.executeQuery();
         if (resultSet.next()) {
