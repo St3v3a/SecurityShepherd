@@ -144,6 +144,11 @@ String translatedLevelName = bundle.getString("challenge.challengeName");
 		</script>
 	<% if(Analytics.googleAnalyticsOn) { %><%= Analytics.googleAnalyticsScript %>
 	<% } %>
+	<form method="post" action="<%= request.getContextPath() %>/challenges/admin-confirm">
+		<label>Confirm administrator password <input type="password" name="currentPassword" required /></label>
+		<input type="hidden" name="csrfToken" value="<%= org.owasp.encoder.Encode.forHtmlAttribute(tokenCookie.getValue()) %>" />
+		<button type="submit">Confirm admin access</button>
+	</form>
 </body>
 </html>
 <%

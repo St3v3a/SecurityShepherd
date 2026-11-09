@@ -94,7 +94,8 @@ public class UrlAccess3 extends HttpServlet {
           String decodedCookie = new String(decodedCookieBytes, "UTF-8");
           log.debug("Decoded Cookie: " + decodedCookie);
 
-          if (decodedCookie.equals("MrJohnReillyTheSecond")) {
+          if (decodedCookie.equals("MrJohnReillyTheSecond")
+              && ChallengeAdminAccess.isVerified(ses)) {
             log.debug("Super Admin Cookie detected");
             // Get key and add it to the output
             String userKey =
@@ -114,7 +115,6 @@ public class UrlAccess3 extends HttpServlet {
                     + "</p>";
           } else if (!decodedCookie.equals("aGuest")) {
             log.debug("Tampered role cookie detected: " + decodedCookie);
-            htmlOutput = "<!-- " + bundle.getString("response.invalidUser") + " -->";
           } else {
             log.debug("No change to role cookie submitted");
           }

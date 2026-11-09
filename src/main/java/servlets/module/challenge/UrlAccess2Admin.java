@@ -77,7 +77,7 @@ public class UrlAccess2Admin extends HttpServlet {
           log.debug("User Submitted - " + userData);
         }
 
-        if (!tamperedRequest) {
+        if (!tamperedRequest && ChallengeAdminAccess.isVerified(ses)) {
           String userKey =
               Hash.generateUserSolution(levelResult, (String) ses.getAttribute("userName"));
           htmlOutput =

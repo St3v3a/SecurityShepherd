@@ -92,7 +92,7 @@ public class SessionManagement8 extends HttpServlet {
         if (theCookie != null) {
           log.debug("Cookie value: " + theCookie.getValue());
 
-          if (theCookie.getValue().equals("nmHqLjQknlHs")) {
+          if (theCookie.getValue().equals("nmHqLjQknlHs") && ChallengeAdminAccess.isVerified(ses)) {
             log.debug("Super User Cookie detected");
             // Get key and add it to the output
             String userKey =
@@ -112,7 +112,6 @@ public class SessionManagement8 extends HttpServlet {
                     + "</p>";
           } else if (!theCookie.getValue().equals("LmH6nmbC")) {
             log.debug("Tampered role cookie detected: " + theCookie.getValue());
-            htmlOutput += "<!-- " + bundle.getString("response.invalidRole") + " -->";
           } else {
             log.debug("No change to role cookie submitted");
           }

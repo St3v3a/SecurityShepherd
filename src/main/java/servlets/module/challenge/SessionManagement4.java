@@ -97,7 +97,8 @@ public class SessionManagement4 extends HttpServlet {
           if (decodedCookie.equals("0000000000000001")) // Guest Session
           {
             log.debug("Guest Session Detected");
-          } else if (decodedCookie.equals("0000000000000009")) // Admin Session
+          } else if (decodedCookie.equals("0000000000000009")
+              && ChallengeAdminAccess.isVerified(ses)) // Admin Session
           {
             log.debug("Admin Session Detected: Challenge Complete");
             // Get key and add it to the output

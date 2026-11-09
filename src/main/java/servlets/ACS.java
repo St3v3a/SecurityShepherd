@@ -19,6 +19,7 @@ import javax.servlet.http.HttpSession;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import servlets.module.challenge.ChallengeAdminAccess;
 import utils.Hash;
 import utils.ShepherdLogManager;
 import utils.UserKicker;
@@ -246,6 +247,7 @@ public class ACS extends HttpServlet {
               ses.setAttribute("userStamp", user[0]);
               ses.setAttribute("userName", user[1]);
               ses.setAttribute("userRole", user[2]);
+              ChallengeAdminAccess.markSsoVerified(ses);
               ses.setAttribute("lang", language);
               log.debug("userClassId = " + user[4]);
 
