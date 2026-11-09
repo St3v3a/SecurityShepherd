@@ -1,9 +1,10 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"
 	language="java" import="utils.*" errorPage=""%>
 <%@ page import="java.util.Locale, java.util.ResourceBundle"%>
+<%@ page import="servlets.module.challenge.BrokenCrypto3"%>
 <%
 /**
- * This level uses XOR's user input with a key. the vulnerability in the cipher is if the attacker submits spaces, the key will be revealed after the XOR.
+ * This level now demonstrates authenticated decryption with a per-session key and a harmless ciphertext example.
  * <br/><br/>
  * This file is part of the Security Shepherd Project.
  * 
@@ -99,7 +100,7 @@ if (request.getSession() != null)
 		<div id="resultsDiv">
 			<h2 class="title"><%= bundle.getString("insecureCryptoStorage.3.ciphertextExample") %></h2>
 			<p><%= bundle.getString("insecureCryptoStorage.3.tryDecryptThis") %>
-				IAAAAEkQBhEVBwpDHAFJGhYHSBYEGgocAw==
+				<%= BrokenCrypto3.exampleCiphertext(ses) %>
 			</p>
 		</div>
 		</p>
