@@ -102,6 +102,7 @@ if (request.getSession() != null)
 		<br />
 		<div id="forgottenPassDiv" style="display: none;">
 			<form id="leForm2" action="javascript:;">
+				<input type="hidden" id="resetCsrfToken" value="<%= org.owasp.encoder.Encode.forHtmlAttribute(tokenCookie.getValue()) %>" />
 				<h2 class='title'><%= bundle.getString("reset.header") %></h2>
 				<p><%= bundle.getString("reset.whatToDo") %></p>
 				<table>
@@ -162,13 +163,14 @@ if (request.getSession() != null)
 						type: "POST",
 						url: "f5ddc0ed2d30e597ebacf5fdd117083674b19bb92ffc3499121b9e6a12c92959",
 						data: {
-							subEmail: theResetEmail
+							subEmail: theResetEmail,
+							csrfToken: $("#resetCsrfToken").val()
 						},
 						async: false
 					});
 					if(ajaxCall.status == 200)
 					{
-						$("#resultsDiv2").html("<p><%= bundle.getString("reset.requestSent") %></p>");
+						$("#resultsDiv2").html(ajaxCall.responseText);
 					}
 					else
 					{
@@ -191,6 +193,30 @@ if (request.getSession() != null)
 		</script>
 	<% if(Analytics.googleAnalyticsOn) { %><%= Analytics.googleAnalyticsScript %>
 	<% } %>
+	<form id="adminConfirmForm" method="post" action="<%= request.getContextPath() %>/challenges/admin-confirm">
+		<label>Confirm administrator password <input type="password" name="currentPassword" required /></label>
+		<input type="hidden" name="csrfToken" value="<%= org.owasp.encoder.Encode.forHtmlAttribute(tokenCookie.getValue()) %>" />
+		<button type="submit">Confirm admin access</button>
+	</form>
+	<p id="adminConfirmResult" role="status"></p>
+	<script>
+		$(function(){
+			$("#adminConfirmForm").on("submit", function(event){
+				event.preventDefault();
+				$.ajax({
+					type: "POST",
+					url: $(this).attr("action"),
+					data: $(this).serialize()
+				}).done(function(){
+					$("#adminConfirmResult").text("Administrator access confirmed. Use the reset form above.");
+				}).fail(function(){
+					$("#adminConfirmResult").text("Administrator confirmation failed.");
+				}).always(function(){
+					$("#adminConfirmForm input[type=password]").val("");
+				});
+			});
+		});
+	</script>
 </body>
 </html>
 <% 

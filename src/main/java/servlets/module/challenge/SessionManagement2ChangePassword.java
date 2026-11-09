@@ -2,13 +2,15 @@ package servlets.module.challenge;
 
 import dbProcs.Database;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.ResultSet;
+import java.util.Base64;
 import java.util.Locale;
 import java.util.ResourceBundle;
 import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -16,12 +18,11 @@ import javax.servlet.http.HttpSession;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.owasp.encoder.Encode;
-import utils.Hash;
 import utils.ShepherdLogManager;
 import utils.Validate;
 
 /**
- * Session Management Challenge Two - Password Reset Servlet Does not return result key <br>
+ * Administrator-assisted Session Management Two password reset <br>
  * <br>
  * This file is part of the Security Shepherd Project.
  *
@@ -39,88 +40,94 @@ import utils.Validate;
  * @author Mark Denihan
  */
 public class SessionManagement2ChangePassword extends HttpServlet {
-
   private static final long serialVersionUID = 1L;
   private static final Logger log = LogManager.getLogger(SessionManagement2ChangePassword.class);
-  private static String levelName = "Session Management Challenge Two (Change Pass)";
-  public static String levelHash =
-      "f5ddc0ed2d30e597ebacf5fdd117083674b19bb92ffc3499121b9e6a12c92959";
+  private static final SecureRandom RANDOM = new SecureRandom();
 
-  /**
-   * A user with the submitted email address is set a new random password, the password is also
-   * returned from the database procedure and is forwards through to the HTTP response. This
-   * response is not consumed by the client interface by default, and the user will have to discover
-   * it.
-   *
-   * @param subEmail Sub schema user email address
-   */
+  @Override
   public void doPost(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-    // Setting IpAddress To Log and taking header for original IP if forwarded from proxy
     ShepherdLogManager.setRequestIp(request.getRemoteAddr(), request.getHeader("X-Forwarded-For"));
-    HttpSession ses = request.getSession(true);
+    HttpSession session = request.getSession(false);
+    if (!Validate.validateSession(session)) {
+      response.sendError(HttpServletResponse.SC_FORBIDDEN);
+      return;
+    }
 
-    // Translation Stuff
-    Locale locale = new Locale(Validate.validateLanguage(request.getSession()));
-    ResourceBundle errors = ResourceBundle.getBundle("i18n.servlets.errors", locale);
+    Locale locale = new Locale(Validate.validateLanguage(session));
     ResourceBundle bundle =
         ResourceBundle.getBundle(
             "i18n.servlets.challenges.sessionManagement.sessionManagement2", locale);
+    ResourceBundle errors = ResourceBundle.getBundle("i18n.servlets.errors", locale);
+    response.setContentType("text/html;charset=UTF-8");
+    response.setHeader("Cache-Control", "no-store");
+    String requestReceived = "<p>" + bundle.getString("response.resetRequestReceived") + "</p>";
 
-    if (Validate.validateSession(ses)) {
-      ShepherdLogManager.setRequestIp(
-          request.getRemoteAddr(),
-          request.getHeader("X-Forwarded-For"),
-          ses.getAttribute("userName").toString());
-      log.debug(levelName + " servlet accessed by: " + ses.getAttribute("userName").toString());
-      PrintWriter out = response.getWriter();
-      out.print(getServletInfo());
+    // Do not disclose whether a subaccount exists or change it for ordinary players.
+    if (!ChallengeAdminAccess.isVerified(session)) {
+      response.getWriter().write(requestReceived);
+      return;
+    }
+    Cookie[] cookies = request.getCookies();
+    Cookie csrfCookie = cookies == null ? null : Validate.getToken(cookies);
+    if (!Validate.validateTokens(csrfCookie, request.getParameter("csrfToken"))) {
+      response.sendError(HttpServletResponse.SC_FORBIDDEN);
+      return;
+    }
+    String email = request.getParameter("subEmail");
+    if (email == null || email.length() > 128 || !Validate.isValidEmailAddress(email)) {
+      response.sendError(HttpServletResponse.SC_BAD_REQUEST);
+      return;
+    }
 
-      String htmlOutput = new String();
-      log.debug(levelName + " Servlet accessed");
-      try {
-        log.debug("Getting Challenge Parameter");
-        Object emailObj = request.getParameter("subEmail");
-        String subEmail = new String();
-        if (emailObj != null) {
-          subEmail = (String) emailObj;
+    try (Connection conn =
+            Database.getChallengeConnection(
+                getServletContext().getRealPath(""), "BrokenAuthAndSessMangChalTwo");
+        PreparedStatement find =
+            conn.prepareStatement("SELECT userId FROM users WHERE userAddress = ?")) {
+      find.setString(1, email);
+      int userId;
+      try (ResultSet matches = find.executeQuery()) {
+        if (!matches.next()) {
+          response.getWriter().write(requestReceived);
+          return;
         }
-        log.debug("subEmail = " + subEmail);
-
-        log.debug("Getting ApplicationRoot");
-        String ApplicationRoot = getServletContext().getRealPath("");
-
-        String newPassword = Hash.randomString();
-        try {
-          Connection conn =
-              Database.getChallengeConnection(ApplicationRoot, "BrokenAuthAndSessMangChalTwo");
-          log.debug("Checking credentials");
-          PreparedStatement callstmt =
-              conn.prepareStatement("UPDATE users SET userPassword = SHA(?) WHERE userAddress = ?");
-          callstmt.setString(1, newPassword);
-          callstmt.setString(2, subEmail);
-          log.debug("Executing resetPassword");
-          callstmt.execute();
-          log.debug("Statement executed");
-
-          log.debug("Committing changes made to database");
-          callstmt = conn.prepareStatement("COMMIT");
-          callstmt.execute();
-          log.debug("Changes committed.");
-
-          htmlOutput = Encode.forHtml(newPassword);
-          Database.closeConnection(conn);
-        } catch (SQLException e) {
-          log.error(levelName + " SQL Error: " + e.toString());
+        userId = matches.getInt(1);
+        if (matches.next()) {
+          response.getWriter().write(requestReceived);
+          return;
         }
-        log.debug("Outputting HTML");
-        out.write(bundle.getString("response.changedTo") + " " + htmlOutput);
-      } catch (Exception e) {
-        out.write(errors.getString("error.funky"));
-        log.fatal(levelName + " - " + e.toString());
       }
-    } else {
-      log.error(levelName + " servlet accessed with no session");
+
+      byte[] random = new byte[24];
+      RANDOM.nextBytes(random);
+      String newPassword = Base64.getUrlEncoder().withoutPadding().encodeToString(random);
+      try (PreparedStatement update =
+          conn.prepareStatement(
+              "UPDATE users SET userPassword = SHA(?) WHERE userId = ? AND userAddress = ?")) {
+        update.setString(1, newPassword);
+        update.setInt(2, userId);
+        update.setString(3, email);
+        if (update.executeUpdate() != 1) {
+          response.getWriter().write(requestReceived);
+          return;
+        }
+      }
+      if (!conn.getAutoCommit()) {
+        conn.commit();
+      }
+      response
+          .getWriter()
+          .write(
+              "<p>"
+                  + bundle.getString("response.changedTo")
+                  + " <code>"
+                  + Encode.forHtml(newPassword)
+                  + "</code></p>");
+    } catch (Exception e) {
+      log.error("Session Management Two password reset failed", e);
+      response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+      response.getWriter().write(errors.getString("error.funky"));
     }
   }
 }

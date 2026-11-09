@@ -86,7 +86,6 @@ public class SessionManagement2 extends HttpServlet {
         Object passObj = request.getParameter("subPassword");
         String subName = new String();
         String subPass = new String();
-        String userAddress = new String();
         if (nameObj != null) {
           subName = (String) nameObj;
         }
@@ -94,7 +93,6 @@ public class SessionManagement2 extends HttpServlet {
           subPass = (String) passObj;
         }
         log.debug("subName = " + subName);
-        log.debug("subPass = " + subPass);
 
         log.debug("Getting ApplicationRoot");
         String ApplicationRoot = getServletContext().getRealPath("");
@@ -120,40 +118,24 @@ public class SessionManagement2 extends HttpServlet {
         ResultSet resultSet = callstmt.executeQuery();
         if (resultSet.next()) {
           log.debug("Successful Login");
-          // Get key and add it to the output
-          String userKey =
-              Hash.generateUserSolution(
-                  Getter.getModuleResultFromHash(ApplicationRoot, levelHash),
-                  (String) ses.getAttribute("userName"));
           htmlOutput =
               "<h2 class='title'>"
                   + bundle.getString("response.welcome")
                   + " "
                   + Encode.forHtml(resultSet.getString(1))
-                  + "</h2>"
-                  + "<p>"
-                  + bundle.getString("response.resultKey")
-                  + " <a>"
-                  + userKey
-                  + "</a>"
-                  + "</p>";
-        } else {
-          log.debug("Incorrect credentials, checking if user name correct");
-          callstmt = conn.prepareStatement("SELECT userAddress FROM users WHERE userName = ?");
-          callstmt.setString(1, subName);
-          log.debug("Executing getAddress");
-          resultSet = callstmt.executeQuery();
-          if (resultSet.next()) {
-            log.debug("User Found");
-            userAddress =
-                bundle.getString("response.badPass")
-                    + " <a>"
-                    + Encode.forHtml(resultSet.getString(1))
-                    + "</a><br/>";
+                  + "</h2>";
+          if (ChallengeAdminAccess.isVerified(ses)) {
+            String userKey =
+                Hash.generateUserSolution(
+                    Getter.getModuleResultFromHash(ApplicationRoot, levelHash),
+                    (String) ses.getAttribute("userName"));
+            htmlOutput +=
+                "<p>" + bundle.getString("response.resultKey") + " <a>" + userKey + "</a></p>";
           } else {
-            userAddress = bundle.getString("response.badUser") + "<br/>";
+            htmlOutput += "<p>" + bundle.getString("response.adminConfirmationRequired") + "</p>";
           }
-          htmlOutput = makeTable(userAddress, bundle);
+        } else {
+          htmlOutput = makeTable(bundle.getString("response.invalidCredentials"), bundle);
         }
         Database.closeConnection(conn);
         log.debug("Outputting HTML");
