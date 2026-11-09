@@ -15,6 +15,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import utils.FindXSS;
 import utils.Hash;
+import utils.SafeHtmlOutput;
 import utils.ShepherdLogManager;
 import utils.Validate;
 import utils.XssFilter;
@@ -78,9 +79,10 @@ public class XssChallengeThree extends HttpServlet {
           String searchTerm = request.getParameter("searchTerm");
           log.debug("User Submitted - " + searchTerm);
           searchTerm = XssFilter.levelThree(searchTerm);
+          String safeSearchTerm = SafeHtmlOutput.text(searchTerm);
           log.debug("After Filtering - " + searchTerm);
           String htmlOutput = new String();
-          if (FindXSS.search(searchTerm)) {
+          if (FindXSS.search(safeSearchTerm)) {
             htmlOutput =
                 "<h2 class='title'>"
                     + bundle.getString("result.wellDone")
@@ -104,7 +106,7 @@ public class XssChallengeThree extends HttpServlet {
                   + "<p>"
                   + bundle.getString("response.noResults")
                   + " "
-                  + searchTerm
+                  + safeSearchTerm
                   + "</p>";
           log.debug("Outputting HTML");
           out.write(htmlOutput);

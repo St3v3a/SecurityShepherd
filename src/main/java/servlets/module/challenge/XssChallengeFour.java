@@ -15,9 +15,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import utils.FindXSS;
 import utils.Hash;
+import utils.SafeHtmlOutput;
 import utils.ShepherdLogManager;
 import utils.Validate;
-import utils.XssFilter;
 
 /**
  * Cross Site Scripting Challenge Four control class. <br>
@@ -89,10 +89,18 @@ public class XssChallengeFour extends HttpServlet {
                     + "</a>";
           } else {
 
-            searchTerm = XssFilter.encodeForHtml(searchTerm);
+            searchTerm =
+                SafeHtmlOutput.httpUrl(
+                    searchTerm, "https://www.owasp.org/index.php/OWASP_Security_Shepherd");
             userPost =
-                "<a href=\"" + searchTerm + "\" alt=\"" + searchTerm + "\">" + searchTerm + "</a>";
-            log.debug("After Encoding - " + searchTerm);
+                "<a href=\""
+                    + SafeHtmlOutput.attribute(searchTerm)
+                    + "\" alt=\""
+                    + SafeHtmlOutput.attribute(searchTerm)
+                    + "\">"
+                    + SafeHtmlOutput.text(searchTerm)
+                    + "</a>";
+            log.debug("After Validation - " + searchTerm);
             if (FindXSS.search(userPost)) {
               htmlOutput =
                   "<h2 class='title'>"
