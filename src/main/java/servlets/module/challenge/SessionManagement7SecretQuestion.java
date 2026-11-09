@@ -97,7 +97,6 @@ public class SessionManagement7SecretQuestion extends HttpServlet {
 
         Object ansObj = request.getParameter("subAnswer");
         String subAns = Validate.validateParameter(ansObj, 35);
-        log.debug("subAnswer = " + subAns);
         Object emailObj = request.getParameter("subEmail");
         String subEmail = Validate.validateParameter(emailObj, 60);
         log.debug("subEmail = " + subEmail);
@@ -119,23 +118,27 @@ public class SessionManagement7SecretQuestion extends HttpServlet {
               ResultSet rs = callstmt.executeQuery();
               if (rs.next()) {
                 log.debug("Correct Answer Submitted");
-                // Get key and add it to the output
-                String userKey =
-                    Hash.generateUserSolution(
-                        Getter.getModuleResultFromHash(ApplicationRoot, levelHash),
-                        (String) ses.getAttribute("userName"));
                 htmlOutput =
                     "<h2 class='title'>"
                         + bundle.getString("response.welcome")
                         + " "
                         + Encode.forHtml(rs.getString(1))
-                        + "</h2>"
-                        + "<p>"
-                        + bundle.getString("response.resultKey")
-                        + " <a>"
-                        + userKey
-                        + "</a>"
-                        + "</p>";
+                        + "</h2>";
+                if (ChallengeAdminAccess.isVerified(ses)) {
+                  String userKey =
+                      Hash.generateUserSolution(
+                          Getter.getModuleResultFromHash(ApplicationRoot, levelHash),
+                          (String) ses.getAttribute("userName"));
+                  htmlOutput +=
+                      "<p>"
+                          + bundle.getString("response.resultKey")
+                          + " <a>"
+                          + userKey
+                          + "</a></p>";
+                } else {
+                  htmlOutput +=
+                      "<p>" + bundle.getString("response.adminConfirmationRequired") + "</p>";
+                }
               } else {
                 log.debug("Bad Answer Submitted");
                 htmlOutput =

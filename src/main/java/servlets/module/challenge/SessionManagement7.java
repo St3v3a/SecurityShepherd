@@ -110,7 +110,6 @@ public class SessionManagement7 extends HttpServlet {
               subPass = (String) passObj;
             }
             log.debug("subName = " + subName);
-            log.debug("subPass = " + subPass);
 
             String ApplicationRoot = getServletContext().getRealPath("");
             Connection conn =
@@ -138,24 +137,23 @@ public class SessionManagement7 extends HttpServlet {
             if (resultSet.next()) {
               // This should never happen. But just in case;
               log.debug("Successful Login");
-              // Get key and add it to the output
-              String userKey =
-                  Hash.generateUserSolution(
-                      Getter.getModuleResultFromHash(ApplicationRoot, levelHash),
-                      (String) ses.getAttribute("userName"));
               htmlOutput =
                   "<h2 class='title'>"
                       + bundle.getString("response.welcome")
                       + " "
                       + Encode.forHtml(resultSet.getString(1))
-                      + "</h2>"
-                      + "<p>"
-                      + ""
-                      + bundle.getString("response.resultKey")
-                      + " <a>"
-                      + userKey
-                      + "</a>"
-                      + "</p>";
+                      + "</h2>";
+              if (ChallengeAdminAccess.isVerified(ses)) {
+                String userKey =
+                    Hash.generateUserSolution(
+                        Getter.getModuleResultFromHash(ApplicationRoot, levelHash),
+                        (String) ses.getAttribute("userName"));
+                htmlOutput +=
+                    "<p>" + bundle.getString("response.resultKey") + " <a>" + userKey + "</a></p>";
+              } else {
+                htmlOutput +=
+                    "<p>" + bundle.getString("response.adminConfirmationRequired") + "</p>";
+              }
             } else {
               log.debug("Incorrect credentials, checking if user name correct");
               callstmt = conn.prepareStatement("SELECT userAddress FROM users WHERE userName = ?");

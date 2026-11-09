@@ -88,7 +88,6 @@ public class SessionManagement6SecretQuestion extends HttpServlet {
         log.debug("subEmail = " + subEmail);
         Object ansObj = request.getParameter("subAnswer");
         String subAns = Validate.validateParameter(ansObj, 128);
-        log.debug("subAnswer = " + subAns);
 
         String ApplicationRoot = getServletContext().getRealPath("");
         try {
@@ -105,23 +104,23 @@ public class SessionManagement6SecretQuestion extends HttpServlet {
             ResultSet rs = callstmt.executeQuery();
             if (rs.next()) {
               log.debug("Correct Answer Submitted");
-              // Get key and add it to the output
-              String userKey =
-                  Hash.generateUserSolution(
-                      Getter.getModuleResultFromHash(ApplicationRoot, levelHash),
-                      (String) ses.getAttribute("userName"));
               htmlOutput =
                   "<h2 class='title'>"
                       + bundle.getString("response.welcome")
                       + " "
                       + Encode.forHtml(rs.getString(1))
-                      + "</h2>"
-                      + "<p>"
-                      + bundle.getString("response.welcome")
-                      + " <a>"
-                      + userKey
-                      + "</a>"
-                      + "</p>";
+                      + "</h2>";
+              if (ChallengeAdminAccess.isVerified(ses)) {
+                String userKey =
+                    Hash.generateUserSolution(
+                        Getter.getModuleResultFromHash(ApplicationRoot, levelHash),
+                        (String) ses.getAttribute("userName"));
+                htmlOutput +=
+                    "<p>" + bundle.getString("response.resultKey") + " <a>" + userKey + "</a></p>";
+              } else {
+                htmlOutput +=
+                    "<p>" + bundle.getString("response.adminConfirmationRequired") + "</p>";
+              }
             } else {
               log.debug("Bad Answer Submitted");
               htmlOutput =
@@ -220,33 +219,28 @@ public class SessionManagement6SecretQuestion extends HttpServlet {
                             + ": </b>"
                             + bundle.getString("question.invalidEmail"));
               } else {
-                Connection conn =
-                    Database.getChallengeConnection(
-                        ApplicationRoot, "BrokenAuthAndSessMangChalSix");
-                log.debug("Getting Secret Question");
-                PreparedStatement callstmt =
-                    conn.prepareStatement(
-                        "SELECT secretQuestion FROM users WHERE userAddress = \""
-                            + subEmail
-                            + "\"");
-                ResultSet rs = callstmt.executeQuery();
-                if (rs.next()) {
-                  log.debug("'Valid' User Detected");
-                  log.debug("Encoding for output: " + rs.getString(1));
-                  // rs.getString(1) contains the question for the user to answer. This question is
-                  // asked in English as it must be answered in English to successfully pass the
-                  // level
-                  htmlOutput = new String(Encode.forHtml(rs.getString(1)));
-                } else {
-                  log.debug("No question found for user");
-                  htmlOutput = bundle.getString("question.noQuestion");
+                try (Connection conn =
+                        Database.getChallengeConnection(
+                            ApplicationRoot, "BrokenAuthAndSessMangChalSix");
+                    PreparedStatement callstmt =
+                        conn.prepareStatement(
+                            "SELECT secretQuestion FROM users WHERE userAddress = ?")) {
+                  callstmt.setString(1, subEmail);
+                  log.debug("Getting Secret Question");
+                  try (ResultSet rs = callstmt.executeQuery()) {
+                    if (rs.next()) {
+                      // The question is public; the answer and result key are not.
+                      htmlOutput = Encode.forHtml(rs.getString(1));
+                    } else {
+                      log.debug("No question found for user");
+                      htmlOutput = bundle.getString("question.noQuestion");
+                    }
+                  }
                 }
-                Database.closeConnection(conn);
               }
             } catch (SQLException e) {
               log.debug(levelName + " SQL Error: " + e.toString());
-              log.debug("Outputting error to user");
-              htmlOutput = new String(e.toString());
+              htmlOutput = errors.getString("error.funky");
             }
           } else {
             log.debug("Tampered cookie detected");
