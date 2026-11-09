@@ -17,7 +17,6 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import utils.Hash;
 import utils.ShepherdLogManager;
 import utils.Validate;
 
@@ -47,15 +46,8 @@ public class SecurityMisconfigStealTokens extends HttpServlet {
   private static String levelName = "Security Misconfig Cookie Flags Servlet";
   public static String levelHash =
       "c4285bbc6734a10897d672c1ed3dd9417e0530a4e0186c27699f54637c7fb5d4";
-  private static String levelResult =
-      "92755de2ebb012e689caf8bfec629b1e237d23438427499b6bf0d7933f1b8215"; // Base Key. User is given
 
-  // user specific key
-
-  /**
-   * This servlet will return the key to complete as long as the cookie submitted is valid and does
-   * not belong to the user making the request
-   */
+  /** A challenge token is valid only for the user who owns the current session. */
   public void doPost(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
     // Setting IpAddress To Log and taking header for original IP if forwarded from proxy
@@ -83,21 +75,18 @@ public class SecurityMisconfigStealTokens extends HttpServlet {
         String userId = ses.getAttribute("userStamp").toString();
         String userActualCookie = getUserToken(userId, applicationRoot);
         // Getting Submitted Cookie
-        int i = 0;
         Cookie[] userCookies = request.getCookies();
         Cookie theToken = null;
-        for (i = 0; i < userCookies.length; i++) {
-          if (userCookies[i].getName().compareTo("securityMisconfigLesson") == 0) {
-            theToken = userCookies[i];
-            break; // End Loop, because we found the token
+        if (userCookies != null) {
+          for (Cookie userCookie : userCookies) {
+            if (userCookie.getName().equals("securityMisconfigLesson")) {
+              theToken = userCookie;
+              break;
+            }
           }
         }
-        String cookieValue = theToken.getValue();
 
-        log.debug("User Submitted Cookie: " + cookieValue);
-        log.debug("Stored Cookie Value  : " + userActualCookie);
-
-        if (cookieValue.compareTo(userActualCookie) == 0) {
+        if (theToken != null && theToken.getValue().equals(userActualCookie)) {
           // User is using their own Cookie: Not Complete
           htmlOutput =
               new String(
@@ -109,35 +98,15 @@ public class SecurityMisconfigStealTokens extends HttpServlet {
                           "securityMisconfig.servlet.stealTokens.notComplete.message")
                       + "<p>");
         } else {
-          // User submitted something different from their cookie
-          boolean notUsersTokenButValid = validToken(userId, cookieValue, applicationRoot);
-          if (notUsersTokenButValid) {
-            log.debug("Valid Cookie of another User Dectected");
-            // Get key and add it to the output
-            String userKey =
-                Hash.generateUserSolution(levelResult, (String) ses.getAttribute("userName"));
-            htmlOutput =
-                "<h2 class='title'>"
-                    + bundle.getString("securityMisconfig.servlet.stealTokens.complete")
-                    + "</h2>"
-                    + "<p>"
-                    + bundle.getString("securityMisconfig.servlet.stealTokens.youDidIt")
-                    + " "
-                    + "<a>"
-                    + userKey
-                    + "</a>"
-                    + "</p>";
-          } else {
-            htmlOutput =
-                new String(
-                    "<h2 class='title'>"
-                        + bundle.getString("securityMisconfig.servlet.stealTokens.notComplete")
-                        + "</h2>"
-                        + "<p>"
-                        + bundle.getString(
-                            "securityMisconfig.servlet.stealTokens.notComplete.yourToken")
-                        + "<p>");
-          }
+          htmlOutput =
+              new String(
+                  "<h2 class='title'>"
+                      + bundle.getString("securityMisconfig.servlet.stealTokens.notComplete")
+                      + "</h2>"
+                      + "<p>"
+                      + bundle.getString(
+                          "securityMisconfig.servlet.stealTokens.notComplete.yourToken")
+                      + "<p>");
         }
       } catch (Exception e) {
         out.write(errors.getString("securityMisconfig.servlet.stealTokens.notComplete.yourToken"));
@@ -180,9 +149,6 @@ public class SecurityMisconfigStealTokens extends HttpServlet {
       throw e;
     }
     conn.close();
-    if (!userToken.isEmpty()) {
-      log.debug("Found token: " + userToken);
-    }
     return userToken;
   }
 

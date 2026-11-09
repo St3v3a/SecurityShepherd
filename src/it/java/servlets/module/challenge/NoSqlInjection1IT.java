@@ -1,5 +1,7 @@
 package servlets.module.challenge;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import dbProcs.GetterIT;
@@ -25,6 +27,8 @@ public class NoSqlInjection1IT extends Mockito {
   private static String USERNAME = "lessonTester";
   private static String LANG = "en_GB";
   private static String NOSQL_ATTACK = "';return(true);var a='a";
+  private static String JIMMY_ID =
+      "b43c05a8166b5bbc5e2baebbbc84a71f83fd7cac01dd5d23bb6e003a95d60b7c";
 
   private static final Logger log = LogManager.getLogger(NoSqlInjection1IT.class);
 
@@ -65,7 +69,7 @@ public class NoSqlInjection1IT extends Mockito {
 
     // Setup Servlet Parameters and Attributes
     log.debug("Setting Up Params and Atrributes");
-    request.addParameter("theGamerName", theSubmission);
+    request.setParameter("theGamerName", theSubmission);
     // Adding Correct CSRF Token (Token Submitted)
     request.addParameter("csrfToken", csrfToken);
 
@@ -77,6 +81,7 @@ public class NoSqlInjection1IT extends Mockito {
     }
 
     log.debug("Running doPost");
+    response = new MockHttpServletResponse();
     servlet.doPost(request, response);
 
     if (response.getStatus() != expectedResponseCode) {
@@ -116,16 +121,16 @@ public class NoSqlInjection1IT extends Mockito {
       fail(message);
     } else {
       request.setCookies(response.getCookies());
-      String servletResponse = moduleDoPost(NOSQL_ATTACK, csrfToken, 302);
-      if (servletResponse.contains("An error was detected")) {
-        String message = new String("Valid Key Returned Funky Error");
-        log.fatal(message);
-        fail(message);
-      } else if (!servletResponse.contains("Marlo</td><td>Baltimore</td></tr><tr><td>b6c02")) {
-        String message = new String("Valid Solution did not return Result Key");
-        log.fatal(message);
-        fail(message);
-      }
+      String rejected = moduleDoPost(NOSQL_ATTACK, csrfToken, 200);
+      assertFalse(rejected.contains("Marlo"));
+      assertFalse(rejected.contains("Clayton"));
+
+      String ordinary = moduleDoPost(JIMMY_ID, csrfToken, 200);
+      assertTrue(ordinary.contains("Jimmy</td><td>Baltimore</td>"));
+      assertFalse(ordinary.contains("Marlo"));
+
+      String repeated = moduleDoPost(JIMMY_ID, csrfToken, 200);
+      assertTrue(repeated.contains("Jimmy</td><td>Baltimore</td>"));
     }
   }
 }
